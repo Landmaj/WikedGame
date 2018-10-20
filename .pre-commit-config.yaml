@@ -1,0 +1,8 @@
+repos:
+- repo: https://github.com/Landmaj/py-commit-hooks.git
+  rev: v1.1.0
+  hooks:
+  - id: black
+  - id: autoflake
+  - id: seed-isort-config
+  - id: isort
