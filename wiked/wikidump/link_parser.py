@@ -10,7 +10,7 @@ pattern = re.compile(
     r"(?!\w+:)"
     r"(?P<link>([^{}\]].*?))"
     r"\]\]"
-    r"(?P<remainder>([^\s,.\'\"]*))"
+    r"(?P<remainder>([^\s,.\'\"()]*))"
 )
 
 
