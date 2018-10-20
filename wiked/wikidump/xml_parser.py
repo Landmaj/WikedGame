@@ -2,7 +2,8 @@ import logging
 import time
 from pathlib import Path
 from typing import Dict, Generator, Tuple
-from xml.etree import ElementTree
+
+from lxml import etree
 
 from wiked.wikidump.link_parser import get_links_from_article
 
@@ -16,9 +17,7 @@ def parse_wiki_dump(
     logger.info(f"Parsing {xml_path.name}")
     page_counter = 0
     skip_page = False
-    for event, element in ElementTree.iterparse(
-        xml_path.as_posix(), events=("start", "end")
-    ):
+    for event, element in etree.iterparse(xml_path.as_posix(), events=("start", "end")):
         tag_name = element.tag.split("}")[1]
 
         if event == "start" and tag_name == "page":
@@ -42,6 +41,13 @@ def parse_wiki_dump(
                 page_counter += 1
                 if page_counter % 100_000 == 0:
                     print(f"Processed {page_counter} articles.")
+
+                # https://stackoverflow.com/questions/7171140/using-python-iterparse-for-large-xml-files#7171543
+                element.clear()
+                for ancestor in element.xpath("ancestor-or-self::*"):
+                    while ancestor.getprevious() is not None:
+                        del ancestor.getparent()[0]
+
                 yield (title, page_id, get_links_from_article(text))
 
     logger.info(f"Found {page_counter} articles.")

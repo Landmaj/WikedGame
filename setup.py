@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-requirements = []
+requirements = ["lxml==4.2.5"]
 
 setup(
     name="WikedGame",
