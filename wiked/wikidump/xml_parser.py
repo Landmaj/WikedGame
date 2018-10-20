@@ -10,6 +10,14 @@ from wiked.wikidump.link_parser import get_links_from_article
 logger = logging.getLogger(__name__)
 
 
+def remove_xml_element(element):
+    # https://stackoverflow.com/questions/7171140/using-python-iterparse-for-large-xml-files#7171543
+    element.clear()
+    for ancestor in element.xpath("ancestor-or-self::*"):
+        while ancestor.getprevious() is not None:
+            del ancestor.getparent()[0]
+
+
 def parse_wiki_dump(
     xml_path: Path
 ) -> Generator[Tuple[str, int, Dict[str, str]], None, None]:
@@ -18,6 +26,7 @@ def parse_wiki_dump(
     file_size = xml_path.stat().st_size
 
     page_counter = 0
+    redirect_counter = 0
     skip_page = False
     with open(xml_path.as_posix(), "rb") as file:
         for event, element in etree.iterparse(file, events=("start", "end")):
@@ -37,7 +46,10 @@ def parse_wiki_dump(
                 elif tag_name == "id" and page_id is None:
                     page_id = int(element.text)
                 elif tag_name == "redirect":
+                    redirect_counter += 1
+                    yield (page_id, title, {element.attrib["title"]: "redirect"})
                     skip_page = True
+                    remove_xml_element(element)
                 elif tag_name == "text":
                     text = element.text
                 elif tag_name == "page":
@@ -52,15 +64,9 @@ def parse_wiki_dump(
                             f"ETA: {round(minutes):02d}:{round(seconds):02d} (m:s)",
                             end="\r",
                         )
+                    yield (page_id, title, get_links_from_article(text))
+                    remove_xml_element(element)
 
-                    # https://stackoverflow.com/questions/7171140/using-python-iterparse-for-large-xml-files#7171543
-                    element.clear()
-                    for ancestor in element.xpath("ancestor-or-self::*"):
-                        while ancestor.getprevious() is not None:
-                            del ancestor.getparent()[0]
-
-                    yield (title, page_id, get_links_from_article(text))
-
-    logger.info(f"Found {page_counter} articles.")
+    logger.info(f"Found {page_counter} articles and {redirect_counter} redirects.")
     minutes, seconds = divmod(round(time.time() - start_timestamp), 60)
     logger.info(f"Elapsed time: {minutes:02d}:{seconds:02d} (m:s).")

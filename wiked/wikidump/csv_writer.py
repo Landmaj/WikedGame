@@ -14,10 +14,10 @@ def generate_neo4j_csv(xml_path: Path, output_dir: Path):
         node_writer = csv.writer(node_f, delimiter="\t", lineterminator="\n")
         rel_writer = csv.writer(rel_f, delimiter="\t", lineterminator="\n")
 
-        node_writer.writerow([":LABEL", "title:ID", "page_id:int"])
+        node_writer.writerow([":LABEL", "page_id:int", "title:ID"])
         rel_writer.writerow([":START_ID", ":TYPE", ":END_ID", "link_description"])
 
         for page in parse_wiki_dump(xml_path):
             node_writer.writerow(["Page", page[0], page[1]])
             for title, description in page[2].items():
-                rel_writer.writerow([page[0], "LINKS_TO", title, description])
+                rel_writer.writerow([page[1], "LINKS_TO", title, description])
