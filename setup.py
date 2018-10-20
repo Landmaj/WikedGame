@@ -1,12 +1,6 @@
-from setuptools import (
-    setup,
-    find_packages,
-)
+from setuptools import find_packages, setup
 
-requirements = [
-    "py2neo==4.1.0",
-    "psutil==5.4.7",
-]
+requirements = []
 
 setup(
     name="WikedGame",
