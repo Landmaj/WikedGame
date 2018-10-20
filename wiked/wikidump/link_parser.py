@@ -1,8 +1,5 @@
 import re
-from typing import (
-    Set,
-    Tuple,
-)
+from typing import Set, Tuple
 
 # https://www.mediawiki.org/wiki/Manual:Page_title
 # [[lingua Graeca antiqua|Graece]]
@@ -13,7 +10,7 @@ pattern = re.compile(
     r"(?!\w+:)"
     r"(?P<link>([^{}\]].*?))"
     r"\]\]"
-    r"(?P<remainder>([^\s,.\'\"]*))",
+    r"(?P<remainder>([^\s,.\'\"]*))"
 )
 
 
