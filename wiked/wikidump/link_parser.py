@@ -1,5 +1,5 @@
 import re
-from typing import Set, Tuple
+from typing import Dict
 
 # https://www.mediawiki.org/wiki/Manual:Page_title
 # [[lingua Graeca antiqua|Graece]]
@@ -10,12 +10,12 @@ pattern = re.compile(
     r"(?!\w+:)"
     r"(?P<link>([^{}\]].*?))"
     r"\]\]"
-    r"(?P<remainder>([^\s,.\'\"()]*))"
+    r"(?P<remainder>([^\s,.\'\"(){}]*))"
 )
 
 
-def get_links_from_article(body: str) -> Set[Tuple[str, str]]:
-    links = set()
+def get_links_from_article(body: str) -> Dict[str, str]:
+    links = dict()
     for match in pattern.finditer(body):
         matched_string = match.group("link").split("|")
         internal_link = matched_string[0]
@@ -27,5 +27,6 @@ def get_links_from_article(body: str) -> Set[Tuple[str, str]]:
             visible_link = f"{visible_link}{match.group('remainder')}"
         # capitalize first letter to avoid duplicates
         internal_link = f"{internal_link[0].upper()}{internal_link[1:]}"
-        links.add((internal_link, visible_link))
+        if internal_link not in links:
+            links[internal_link] = visible_link
     return links

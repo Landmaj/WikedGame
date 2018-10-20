@@ -1,7 +1,7 @@
 import logging
 import time
 from pathlib import Path
-from typing import Generator, Set, Tuple
+from typing import Dict, Generator, Tuple
 from xml.etree import ElementTree
 
 from wiked.wikidump.link_parser import get_links_from_article
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 def parse_wiki_dump(
     xml_path: Path
-) -> Generator[Tuple[str, int, Set[Tuple[str, str]]], None, None]:
+) -> Generator[Tuple[str, int, Dict[str, str]], None, None]:
     start_timestamp = time.time()
     logger.info(f"Parsing {xml_path.name}")
     page_counter = 0
