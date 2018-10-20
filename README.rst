@@ -12,6 +12,7 @@ To import data into Neo4j:
     --mode csv \
     --database graph.db \
     --ignore-missing-nodes \
+    --delimiter "\t" \
     --nodes="/path/to/neo4j/import/node.csv" \
     --relationships="/path/to/neo4j/import/relationship.csv"
 
