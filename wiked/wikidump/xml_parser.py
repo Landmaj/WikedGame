@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from pathlib import Path
 from typing import Dict, Generator, Tuple
@@ -6,6 +7,7 @@ from typing import Dict, Generator, Tuple
 from lxml import etree
 
 from wiked.wikidump.link_parser import get_links_from_article
+import bz2
 
 logger = logging.getLogger(__name__)
 
@@ -19,16 +21,18 @@ def remove_xml_element(element):
 
 
 def parse_wiki_dump(
-    xml_path: Path
+    xml_bz2_path: Path
 ) -> Generator[Tuple[str, int, Dict[str, str]], None, None]:
-    logger.info(f"Parsing {xml_path.name}")
+    logger.info(f"Parsing {xml_bz2_path.name}")
     start_timestamp = time.time()
-    file_size = xml_path.stat().st_size
 
     page_counter = 0
     redirect_counter = 0
     skip_page = False
-    with open(xml_path.as_posix(), "rb") as file:
+    with bz2.open(xml_bz2_path.as_posix(), "rb") as file:
+        file.seek(0, os.SEEK_END)
+        file_size = file.tell()
+        file.seek(0)
         for event, element in etree.iterparse(file, events=("start", "end")):
             tag_name = element.tag.split("}")[1]
 

@@ -4,7 +4,7 @@ from pathlib import Path
 from wiked.wikidump.xml_parser import parse_wiki_dump
 
 
-def generate_neo4j_csv(xml_path: Path, output_dir: Path):
+def generate_neo4j_csv(xml_bz2_path: Path, output_dir: Path):
     node_csv = (output_dir / "node.csv").as_posix()
     rel_csv = (output_dir / "relationship.csv").as_posix()
 
@@ -17,7 +17,7 @@ def generate_neo4j_csv(xml_path: Path, output_dir: Path):
         node_writer.writerow([":LABEL", "page_id:int", "title:ID"])
         rel_writer.writerow([":START_ID", ":TYPE", ":END_ID", "link_description"])
 
-        for page in parse_wiki_dump(xml_path):
+        for page in parse_wiki_dump(xml_bz2_path):
             node_writer.writerow(["Page", page[0], page[1]])
             for title, description in page[2].items():
                 rel_writer.writerow([page[1], "LINKS_TO", title, description])
