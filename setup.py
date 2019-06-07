@@ -9,6 +9,6 @@ setup(
     install_requires=requirements,
     license="GPL",
     author="Michał Wieluński",
-    author_email="michal@landmaj.pl",
+    author_email="michal@w-ski.dev",
     description="Find the shortest path between two articles on Wikipedia.",
 )
