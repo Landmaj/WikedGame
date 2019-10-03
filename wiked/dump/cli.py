@@ -20,7 +20,7 @@ def main(language, filepath):
             print("Preparing temporary title to ID database...")
             for item in parse_wiki_dump(filepath, skip_links=True):
                 title_to_id[item[1]] = str(item[0])
-            with dbm.open(f"{language}_{int(time())}", "n") as db:
+            with dbm.open(f"{language}_{int(time())}.dbm", "n") as db:
                 print("\nPreparing database...")
                 for item in parse_wiki_dump(filepath):
                     links = set()

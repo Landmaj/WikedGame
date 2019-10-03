@@ -1,18 +1,13 @@
+import bz2
 import logging
 import os
 import time
 from pathlib import Path
-from typing import (
-    Dict,
-    Generator,
-    Tuple,
-    Optional,
-)
+from typing import Dict, Generator, Optional, Tuple
 
 from lxml import etree
 
 from wiked.dump.link_parser import get_links_from_article
-import bz2
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +21,7 @@ def remove_xml_element(element):
 
 
 def parse_wiki_dump(
-    xml_bz2_path: Path,
-    skip_links: bool = False,
+    xml_bz2_path: Path, skip_links: bool = False
 ) -> Generator[Tuple[int, str, Optional[Dict[str, str]]], None, None]:
     logger.info(f"Parsing {xml_bz2_path.name}")
     start_timestamp = time.time()
