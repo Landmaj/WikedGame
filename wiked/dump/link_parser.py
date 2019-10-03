@@ -1,5 +1,5 @@
 import re
-from typing import Dict
+from typing import Dict, Set
 
 # https://www.mediawiki.org/wiki/Manual:Page_title
 # [[lingua Graeca antiqua|Graece]]
@@ -20,7 +20,26 @@ def clean_html(raw_html):
     return re.sub(html_pattern, "", raw_html)
 
 
-def get_links_from_article(body: str) -> Dict[str, str]:
+def get_internal_links_from_article(body: str) -> Set[str]:
+    links = set()
+    for match in pattern.finditer(body):
+        matched_string = match.group("link").split("|")
+        internal_link = matched_string[0]
+        # capitalize first letter to avoid duplicates
+        internal_link = f"{internal_link[0].upper()}{internal_link[1:]}"
+
+        # sanitize data
+        internal_link = (
+            internal_link.strip()
+            .replace("\r", "")
+            .replace("\t", " ")
+            .replace("\n", " ")
+        )
+        links.add(internal_link)
+    return links
+
+
+def get_visible_links_from_article(body: str) -> Dict[str, str]:
     links = dict()
     for match in pattern.finditer(body):
         matched_string = match.group("link").split("|")

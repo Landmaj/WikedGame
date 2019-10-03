@@ -16,7 +16,7 @@ from wiked.dump.xml_parser import parse_wiki_dump
 def main(language, filepath):
     filepath = Path(filepath)
     try:
-        with dbm.open("tmp.dmb", "n") as title_to_id:
+        with dbm.open("tmp.dbm", "n") as title_to_id:
             print("Preparing temporary title to ID database...")
             for item in parse_wiki_dump(filepath, skip_links=True):
                 title_to_id[item[1]] = str(item[0])
@@ -24,9 +24,9 @@ def main(language, filepath):
                 print("\nPreparing database...")
                 for item in parse_wiki_dump(filepath):
                     links = set()
-                    for title in item[2].keys():
+                    for title in item[2]:
                         try:
-                            page_id = db[title]
+                            page_id = title_to_id[title]
                         except KeyError:
                             continue
                         links.add(int(page_id))
