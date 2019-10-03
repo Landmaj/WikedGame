@@ -6,4 +6,3 @@ repos:
   - id: isort
   - id: black
   - id: flake8
-

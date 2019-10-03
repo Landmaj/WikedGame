@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 
-requirements = ["lxml==4.2.5", "sqlalchemy==1.3.4", "psycopg2==2.8.2"]
-test_requirements = ["pytest==4.6.2"]
+requirements = ["lxml==4.2.5"]
+test_requirements = []
 
 setup(
     name="WikedGame",
