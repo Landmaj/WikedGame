@@ -32,5 +32,5 @@ def main(language, filepath):
                         links.add(int(page_id))
                     db[pickle.dumps(item[0])] = (Node(item[0], item[1], links)).dumps()
     finally:
-        os.remove("tmp.dmb")
+        os.remove("tmp.dbm")
         print("\nFinished!")
