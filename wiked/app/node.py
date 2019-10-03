@@ -6,6 +6,9 @@ class Node(tuple):
     def __new__(cls, page_id: int, title: str, links: Set[int]):
         return tuple.__new__(Node, (page_id, title, links))
 
+    def __getnewargs__(self):
+        return self.page_id, self.title, self.links
+
     def __hash__(self) -> int:
         return self.page_id
 
@@ -28,5 +31,5 @@ class Node(tuple):
     def links(self) -> Set[int]:
         return self[2]
 
-    def dump(self):
+    def dumps(self):
         return pickle.dumps(self, protocol=pickle.HIGHEST_PROTOCOL)

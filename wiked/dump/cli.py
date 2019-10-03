@@ -30,7 +30,7 @@ def main(language, filepath):
                         except KeyError:
                             continue
                         links.add(int(page_id))
-                    db[pickle.dumps(item[0])] = (Node(item[0], item[1], links)).dump()
+                    db[pickle.dumps(item[0])] = (Node(item[0], item[1], links)).dumps()
     finally:
         os.remove("tmp.dmb")
         print("\nFinished!")
