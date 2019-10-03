@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-requirements = ["lxml==4.2.5"]
+requirements = ["lxml==4.2.5", "click==7.0"]
 test_requirements = []
 
 setup(
@@ -9,6 +9,7 @@ setup(
     packages=find_packages(exclude=["tests"]),
     install_requires=requirements,
     extras_require={"dev": test_requirements},
+    entry_points={"console_scripts": ["wiked_parser = wiked.dump.cli:main"]},
     license="GPL",
     author="Michał Wieluński",
     author_email="michal@w-ski.dev",

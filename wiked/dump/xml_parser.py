@@ -2,7 +2,12 @@ import logging
 import os
 import time
 from pathlib import Path
-from typing import Dict, Generator, Tuple
+from typing import (
+    Dict,
+    Generator,
+    Tuple,
+    Optional,
+)
 
 from lxml import etree
 
@@ -21,8 +26,9 @@ def remove_xml_element(element):
 
 
 def parse_wiki_dump(
-    xml_bz2_path: Path
-) -> Generator[Tuple[str, int, Dict[str, str]], None, None]:
+    xml_bz2_path: Path,
+    skip_links: bool = False,
+) -> Generator[Tuple[int, str, Optional[Dict[str, str]]], None, None]:
     logger.info(f"Parsing {xml_bz2_path.name}")
     start_timestamp = time.time()
 
@@ -51,7 +57,10 @@ def parse_wiki_dump(
                     page_id = int(element.text)
                 elif tag_name == "redirect":
                     redirect_counter += 1
-                    yield (page_id, title, {element.attrib["title"]: "redirect"})
+                    if skip_links:
+                        yield (page_id, title, None)
+                    else:
+                        yield (page_id, title, {element.attrib["title"]: "redirect"})
                     skip_page = True
                     remove_xml_element(element)
                 elif tag_name == "text":
@@ -68,9 +77,14 @@ def parse_wiki_dump(
                             f"ETA: {round(minutes):02d}:{round(seconds):02d} (m:s)",
                             end="\r",
                         )
-                    yield (page_id, title, get_links_from_article(text))
+                    if skip_links:
+                        yield (page_id, title, None)
+                    else:
+                        yield (page_id, title, get_links_from_article(text))
                     remove_xml_element(element)
 
-    logger.info(f"Found {page_counter} articles and {redirect_counter} redirects.")
+    print("")
+    if not skip_links:
+        print(f"Found {page_counter} articles and {redirect_counter} redirects.")
     minutes, seconds = divmod(round(time.time() - start_timestamp), 60)
-    logger.info(f"Elapsed time: {minutes:02d}:{seconds:02d} (m:s).")
+    print(f"Elapsed time: {minutes:02d}:{seconds:02d} (m:s).")
