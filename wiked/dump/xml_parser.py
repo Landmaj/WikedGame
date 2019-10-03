@@ -6,7 +6,7 @@ from typing import Dict, Generator, Tuple
 
 from lxml import etree
 
-from wiked.wikidump.link_parser import get_links_from_article
+from wiked.dump.link_parser import get_links_from_article
 import bz2
 
 logger = logging.getLogger(__name__)
