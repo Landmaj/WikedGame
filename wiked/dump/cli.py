@@ -24,6 +24,7 @@ def main(language, filepath):
                 title_to_id[item[1]] = str(item[0])
             with Graph(Path.cwd() / f"{language}_{int(time())}.db", "n") as graph:
                 print("Preparing database...")
+                counter = 0
                 for item in parse_wiki_dump(filepath):
                     links = set()
                     for title in item[2]:
@@ -33,7 +34,11 @@ def main(language, filepath):
                             continue
                         links.add(int(page_id))
                     graph[item[0]] = Node(item[0], item[1], links)
+                    counter += 1
     finally:
         os.remove(tmp_file)
         minutes, seconds = divmod(round(time() - start_timestamp), 60)
-        print(f"Finished! Elapsed time: {minutes:02d}:{seconds:02d} (m:s).")
+        print(
+            f"Finished! Elapsed time: {minutes:02d}:{seconds:02d} (m:s). "
+            f"Articles: {counter}."
+        )
