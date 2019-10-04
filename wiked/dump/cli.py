@@ -6,7 +6,7 @@ from time import time
 
 import click
 
-from wiked.app.node import Node
+from wiked.app.graph import Node
 from wiked.dump.xml_parser import parse_wiki_dump
 
 
