@@ -1,5 +1,4 @@
 import bz2
-import time
 from pathlib import Path
 from typing import Dict, Generator, Optional, Set, Tuple, Union
 
@@ -19,9 +18,6 @@ def remove_xml_element(element):
 def parse_wiki_dump(
     xml_bz2_path: Path, skip_links: bool = False
 ) -> Generator[Tuple[int, str, Optional[Union[Dict[str, str], Set[str]]]], None, None]:
-    print(f"Parsing {xml_bz2_path.name}")
-    start_timestamp = time.time()
-
     skip_page = False
     with bz2.open(xml_bz2_path.as_posix(), "rb") as file:
         for event, element in etree.iterparse(file, events=("start", "end")):
@@ -55,6 +51,3 @@ def parse_wiki_dump(
                     else:
                         yield (page_id, title, get_internal_links_from_article(text))
                     remove_xml_element(element)
-
-    minutes, seconds = divmod(round(time.time() - start_timestamp), 60)
-    print(f"Elapsed time: {minutes:02d}:{seconds:02d} (m:s).")
