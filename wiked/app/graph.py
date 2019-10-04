@@ -1,17 +1,18 @@
 import dbm
-import pickle
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Set, Tuple
 
-from wiked.app.exc import NodeNotFound, PathNotFound
+import msgpack
+
+from wiked.app.exc import GraphError, NodeNotFound, PathNotFound
 
 
-class Node(tuple):
-    def __new__(cls, page_id: int, title: str, links: Set[int]):
-        return tuple.__new__(Node, (page_id, title, links))
-
-    def __getnewargs__(self):
-        return self.page_id, self.title, self.links
+@dataclass
+class Node:
+    page_id: int
+    title: str
+    links: Set[int]
 
     def __hash__(self) -> int:
         return self.page_id
@@ -23,25 +24,20 @@ class Node(tuple):
             return self.page_id == other
         return NotImplemented
 
-    @property
-    def page_id(self) -> int:
-        return self[0]
+    def dumps(self) -> bytes:
+        data = (self.page_id, self.title, list(self.links))
+        return msgpack.packb(data, use_bin_type=True)
 
-    @property
-    def title(self) -> str:
-        return self[1]
-
-    @property
-    def links(self) -> Set[int]:
-        return self[2]
-
-    def dumps(self):
-        return pickle.dumps(self, protocol=pickle.HIGHEST_PROTOCOL)
+    @staticmethod
+    def loads(serialized_node: bytes) -> "Node":
+        data = msgpack.unpackb(serialized_node, use_list=False, raw=False)
+        return Node(data[0], data[1], {*data[2]})
 
 
 class Graph:
-    def __init__(self, path: Path):
-        self.db = dbm.open(path.as_posix(), "r")
+    def __init__(self, path: Path, mode: str = "r"):
+        self.db = dbm.open(path.as_posix(), mode)
+        self.mode = mode
         self.language = path.stem.split("_")[0]
 
     def __enter__(self):
@@ -50,13 +46,23 @@ class Graph:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.db.close()
 
-    def __getitem__(self, item) -> Optional[Node]:
-        key = pickle.dumps(item)
+    def __getitem__(self, key: int) -> Optional[Node]:
+        key: bytes = msgpack.packb(key)
         try:
             value = self.db[key]
         except KeyError:
             return None
-        return pickle.loads(value)
+        return Node.loads(value)
+
+    def __setitem__(self, key: int, value: Node) -> None:
+        if self.mode == "r":
+            raise GraphError("Setting values is not allowed in read mode.")
+        if not isinstance(value, Node):
+            raise GraphError(
+                f"Value must be of type {Node.__name__}, not {type(value)}."
+            )
+        key: bytes = msgpack.packb(key)
+        self.db[key] = value.dumps()
 
 
 class BFS:

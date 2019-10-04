@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-requirements = ["lxml==4.2.5", "click==7.0"]
+requirements = ["lxml==4.2.5", "click==7.0", "msgpack==0.6.2"]
 test_requirements = []
 
 setup(

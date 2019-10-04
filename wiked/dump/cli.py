@@ -1,12 +1,11 @@
 import dbm
 import os
-import pickle
 from pathlib import Path
 from time import time
 
 import click
 
-from wiked.app.graph import Node
+from wiked.app.graph import Graph, Node
 from wiked.dump.xml_parser import parse_wiki_dump
 
 
@@ -15,12 +14,13 @@ from wiked.dump.xml_parser import parse_wiki_dump
 @click.argument("filepath", type=click.Path(exists=True))
 def main(language, filepath):
     filepath = Path(filepath)
+    tmp_file = "tmp.db"
     try:
-        with dbm.open("tmp.dbm", "n") as title_to_id:
+        with dbm.open(tmp_file, "n") as title_to_id:
             print("Preparing temporary title to ID database...")
             for item in parse_wiki_dump(filepath, skip_links=True):
                 title_to_id[item[1]] = str(item[0])
-            with dbm.open(f"{language}_{int(time())}.dbm", "n") as db:
+            with Graph(Path.cwd() / f"{language}_{int(time())}.db", "n") as graph:
                 print("\nPreparing database...")
                 for item in parse_wiki_dump(filepath):
                     links = set()
@@ -30,7 +30,7 @@ def main(language, filepath):
                         except KeyError:
                             continue
                         links.add(int(page_id))
-                    db[pickle.dumps(item[0])] = (Node(item[0], item[1], links)).dumps()
+                    graph[item[0]] = Node(item[0], item[1], links)
     finally:
-        os.remove("tmp.dbm")
+        os.remove(tmp_file)
         print("\nFinished!")
