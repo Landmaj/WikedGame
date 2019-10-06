@@ -25,9 +25,9 @@
       <comment>add [[WP:RCAT|rcat]]s</comment>
       <model>wikitext</model>
       <format>text/x-wiki</format>
-      <text xml:space="preserve">#REDIRECT [[Computer accessibility]]
-
-\{\{Redr|move|from CamelCase|up\}\}</text>
+      <text xml:space="preserve">
+        #REDIRECT [[Computer accessibility]]
+      </text>
       <sha1>4ro7vvppa5kmm0o1egfjztzcwd0vabw</sha1>
     </revision>
   </page>
@@ -47,8 +47,10 @@
       <comment>Reformat 1 archive link. [[User:Green Cardamom/WaybackMedic_2.1|Wayback Medic 2.1]]</comment>
       <model>wikitext</model>
       <format>text/x-wiki</format>
-
-<text xml:space="preserve">
-...
-</text>
-</mediawiki>
+      <text xml:space="preserve">
+      ...
+      </text>
+      <sha1>4ro7vvppa5kmm0o1egfjztzcwd0vabw</sha1>
+    </revision>
+  </page>
+  </mediawiki>
