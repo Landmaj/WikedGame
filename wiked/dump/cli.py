@@ -9,14 +9,13 @@ from wiked.dump.xml_parser import parse_wiki_dump
 
 
 @click.command()
-@click.argument("language")
 @click.argument("filepath", type=click.Path(exists=True))
-def main(language, filepath):
+def main(filepath):
     filepath = Path(filepath)
     print(f"Processing {filepath.name}.")
     stem = filepath.name.split(".")[0]  # the file extension is .xml.bz2
     intermediate_database = Path.cwd() / f"{stem}_inter.db"
-    output_file = Path.cwd() / f"{stem}_{language}.db"
+    output_file = Path.cwd() / f"{stem}_final.db"
 
     if intermediate_database.is_file():
         print("Found existing intermediate database.")
