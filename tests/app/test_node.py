@@ -83,14 +83,3 @@ def test_getitem():
     for key in (1, "2"):
         with pytest.raises(KeyError):
             assert node1[key]
-
-
-def test_setitem():
-    node1 = Node(1, "Title", {2: "Title2", 3: "Title3"})
-    node2 = Node(2, "Title2", {})
-    node1[2] = "2137"
-    assert node1.edges == {2: "2137", 3: "Title3"}
-    node1[node2] = "7312"
-    assert node1.edges == {2: "7312", 3: "Title3"}
-    with pytest.raises(TypeError):
-        node1["2"] = "2137"

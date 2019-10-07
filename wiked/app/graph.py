@@ -5,7 +5,7 @@ from typing import Dict, Optional, Tuple
 
 import msgpack
 
-from wiked.app.exc import GraphError, NodeNotFound, PathNotFound
+from wiked.app.exc import NodeNotFound, PathNotFound
 
 
 @dataclass
@@ -39,17 +39,6 @@ class Node:
         """
         return self.edges[item]
 
-    def __setitem__(self, key, value) -> None:
-        """
-        Create an edge.
-        """
-        if isinstance(key, int):
-            self.edges[key] = value
-        elif isinstance(key, Node):
-            self.edges[key.page_id] = value
-        else:
-            raise TypeError("Key must be of type `int` or `Node`.")
-
     def dumps(self) -> bytes:
         """
         Serialize the node to be stored in a database.
@@ -67,10 +56,8 @@ class Node:
 
 
 class Graph:
-    def __init__(self, path: Path, mode: str = "r"):
-        self.db = dbm.open(path.as_posix(), mode)
-        self.mode = mode
-        self.language = path.stem.split("_")[0]
+    def __init__(self, path: Path):
+        self.db = dbm.open(path.as_posix(), "r")
 
     def __enter__(self):
         return self
@@ -85,16 +72,6 @@ class Graph:
         except KeyError:
             return None
         return Node.loads(value)
-
-    def __setitem__(self, key: int, value: Node) -> None:
-        if self.mode == "r":
-            raise GraphError("Setting values is not allowed in read mode.")
-        if not isinstance(value, Node):
-            raise GraphError(
-                f"Value must be of type {Node.__name__}, not {type(value)}."
-            )
-        key: bytes = msgpack.packb(key)
-        self.db[key] = value.dumps()
 
 
 class BFS:
@@ -111,13 +88,13 @@ class BFS:
         item = self.graph[start]
         if end in item.edges:
             return start, end
-        for i in item.edges - self.visited:
+        for i in item.edges.keys() - self.visited:
             self.queue.append((start, i))
         while self.queue:
             current = self.queue.pop(0)
             item = self.graph[current[-1]]
             if end in item.edges:
                 return (*current, end)
-            for i in item.edges - self.visited:
+            for i in item.edges.keys() - self.visited:
                 self.queue.append((*current, i))
         raise PathNotFound(f"Could not found any path from node {start} to node {end}.")

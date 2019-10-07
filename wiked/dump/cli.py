@@ -10,11 +10,9 @@ from wiked.dump.xml_parser import parse_wiki_dump
 
 class DB:
     def __init__(self, path: Path, mode: str):
-        self.path = path
-        self.mode = mode
+        self.db = dbm.open(path.as_posix(), mode)
 
     def __enter__(self):
-        self.db = dbm.open(self.path.as_posix(), self.mode)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
