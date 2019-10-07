@@ -3,8 +3,8 @@ from pathlib import Path
 from time import time
 
 import click
+import msgpack
 
-from wiked.app.graph import Graph, Node
 from wiked.dump.xml_parser import parse_wiki_dump
 
 
@@ -29,7 +29,7 @@ def main(filepath):
         print(f"Elapsed time: {minutes:02d}:{seconds:02d} (m:s). ")
 
     with dbm.open(intermediate_database.as_posix(), "r") as title_to_id:
-        with Graph(output_file, "n") as graph:
+        with dbm.open(output_file.as_posix(), "n") as db:
             print("Preparing final database...")
             start_timestamp = time()
             counter = 0
@@ -41,7 +41,9 @@ def main(filepath):
                     except KeyError:
                         continue
                     links[page_id] = value
-                graph[item[0]] = Node(item[0], item[1], links)
+                db[msgpack.packb(item[0])] = msgpack.packb(
+                    (item[0], item[1], links), use_bin_type=True
+                )
                 counter += 1
     minutes, seconds = divmod(round(time() - start_timestamp), 60)
     print(
