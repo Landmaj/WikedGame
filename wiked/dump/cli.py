@@ -37,7 +37,7 @@ def main(filepath):
                 links = dict()
                 for key, value in item[2].items():
                     try:
-                        page_id = title_to_id[key]
+                        page_id = int(title_to_id[key])
                     except KeyError:
                         continue
                     links[page_id] = value
