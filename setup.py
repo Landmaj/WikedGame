@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 
 requirements = ["lxml==4.2.5", "click==7.0", "msgpack==0.6.2"]
-test_requirements = []
+test_requirements = ["pytest==5.2.1"]
 
 setup(
     name="WikedGame",
