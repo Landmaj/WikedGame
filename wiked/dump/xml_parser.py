@@ -1,10 +1,10 @@
 import bz2
 from pathlib import Path
-from typing import Dict, Generator, Optional, Set, Tuple, Union
+from typing import Dict, Generator, Optional, Tuple
 
 from lxml import etree
 
-from wiked.dump.link_parser import get_internal_links_from_article
+from wiked.dump.link_parser import get_visible_links_from_article
 
 
 def remove_xml_element(element):
@@ -17,7 +17,7 @@ def remove_xml_element(element):
 
 def parse_wiki_dump(
     xml_bz2_path: Path, skip_links: bool = False
-) -> Generator[Tuple[int, str, Optional[Union[Dict[str, str], Set[str]]]], None, None]:
+) -> Generator[Tuple[int, str, Optional[Dict[str, str]]], None, None]:
     skip_page = False
     with bz2.open(xml_bz2_path.as_posix(), "rb") as file:
         for event, element in etree.iterparse(file, events=("start", "end")):
@@ -49,5 +49,5 @@ def parse_wiki_dump(
                     if skip_links:
                         yield (page_id, title, None)
                     else:
-                        yield (page_id, title, get_internal_links_from_article(text))
+                        yield (page_id, title, get_visible_links_from_article(text))
                     remove_xml_element(element)

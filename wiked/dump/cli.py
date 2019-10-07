@@ -34,13 +34,16 @@ def main(filepath):
             start_timestamp = time()
             counter = 0
             for item in parse_wiki_dump(filepath):
-                links = set()
-                for title in item[2]:
+                links = dict()
+                for key, value in item[2].items():
                     try:
-                        page_id = title_to_id[title]
+                        page_id = title_to_id[key]
                     except KeyError:
                         continue
-                    links.add(int(page_id))
+                    if key == value:
+                        links[page_id] = None
+                    else:
+                        links[page_id] = value
                 graph[item[0]] = Node(item[0], item[1], links)
                 counter += 1
     minutes, seconds = divmod(round(time() - start_timestamp), 60)
