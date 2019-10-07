@@ -45,3 +45,6 @@ jobs:
       - name: Run black
         run: |
           pre-commit run black --all-files --show-diff-on-failure
+      - name: Run flake8
+        run: |
+          pre-commit run flake8 --all-files --show-diff-on-failure
