@@ -1,7 +1,7 @@
 import dbm
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Set, Tuple
+from typing import Dict, Optional, Tuple
 
 import msgpack
 
@@ -12,7 +12,7 @@ from wiked.app.exc import GraphError, NodeNotFound, PathNotFound
 class Node:
     page_id: int
     title: str
-    links: Set[int]
+    edges: Dict[int, str]
 
     def __hash__(self) -> int:
         return self.page_id
@@ -24,14 +24,46 @@ class Node:
             return self.page_id == other
         return NotImplemented
 
+    def __contains__(self, item) -> bool:
+        """
+        Return True if the node links to the provided article ID.
+        """
+        if isinstance(item, Node) or isinstance(item, int):
+            return item in self.edges
+        return False
+
+    def __getitem__(self, item) -> str:
+        """
+        Return visible value of an edge (text which is visible as link
+        in article text).
+        """
+        return self.edges[item]
+
+    def __setitem__(self, key, value) -> None:
+        """
+        Create an edge.
+        """
+        if isinstance(key, int):
+            self.edges[key] = value
+        elif isinstance(key, Node):
+            self.edges[key.page_id] = value
+        else:
+            raise TypeError("Key must be of type `int` or `Node`.")
+
     def dumps(self) -> bytes:
-        data = (self.page_id, self.title, list(self.links))
+        """
+        Serialize the node to be stored in a database.
+        """
+        data = (self.page_id, self.title, self.edges)
         return msgpack.packb(data, use_bin_type=True)
 
     @staticmethod
     def loads(serialized_node: bytes) -> "Node":
+        """
+        Deserialize a node.
+        """
         data = msgpack.unpackb(serialized_node, use_list=False, raw=False)
-        return Node(data[0], data[1], {*data[2]})
+        return Node(data[0], data[1], data[2])
 
 
 class Graph:
@@ -77,15 +109,15 @@ class BFS:
         if self.graph[end] is None:
             raise NodeNotFound(f"End node {end} does not exist.")
         item = self.graph[start]
-        if end in item.links:
+        if end in item.edges:
             return start, end
-        for i in item.links - self.visited:
+        for i in item.edges - self.visited:
             self.queue.append((start, i))
         while self.queue:
             current = self.queue.pop(0)
             item = self.graph[current[-1]]
-            if end in item.links:
+            if end in item.edges:
                 return (*current, end)
-            for i in item.links - self.visited:
+            for i in item.edges - self.visited:
                 self.queue.append((*current, i))
         raise PathNotFound(f"Could not found any path from node {start} to node {end}.")
