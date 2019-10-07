@@ -4,7 +4,7 @@ from typing import Dict, Generator, Optional, Tuple
 
 from lxml import etree
 
-from wiked.dump.link_parser import get_visible_links_from_article
+from wiked.dump.link_parser import get_links_from_article
 
 
 def remove_xml_element(element):
@@ -15,39 +15,29 @@ def remove_xml_element(element):
             del ancestor.getparent()[0]
 
 
+NAMESPACES = {"wiki": "http://www.mediawiki.org/xml/export-0.10/"}
+NS = etree.XPath(".//wiki:ns/text()", namespaces=NAMESPACES)
+PAGE_ID = etree.XPath(".//wiki:id/text()", namespaces=NAMESPACES)
+TITLE = etree.XPath(".//wiki:title/text()", namespaces=NAMESPACES)
+REDIRECT = etree.XPath(".//wiki:redirect/@title", namespaces=NAMESPACES)
+TEXT = etree.XPath(".//wiki:revision/wiki:text/text()", namespaces=NAMESPACES)
+
+
 def parse_wiki_dump(
     xml_bz2_path: Path, skip_links: bool = False
 ) -> Generator[Tuple[int, str, Optional[Dict[str, str]]], None, None]:
-    skip_page = False
     with bz2.open(xml_bz2_path.as_posix(), "rb") as file:
-        for event, element in etree.iterparse(file, events=("start", "end")):
-            tag_name = element.tag.split("}")[1]
-
-            if event == "start" and tag_name == "page":
-                skip_page = False
-                title = None
-                page_id = None
-                text = None
-            elif event == "end" and not skip_page:
-                if tag_name == "title":
-                    title = element.text
-                elif tag_name == "ns":
-                    if int(element.text) != 0:
-                        skip_page = True
-                elif tag_name == "id" and page_id is None:
-                    page_id = int(element.text)
-                elif tag_name == "redirect":
-                    if skip_links:
-                        yield (page_id, title, None)
-                    else:
-                        yield (page_id, title, {element.attrib["title"]: "redirect"})
-                    skip_page = True
-                    remove_xml_element(element)
-                elif tag_name == "text":
-                    text = element.text
-                elif tag_name == "page":
-                    if skip_links:
-                        yield (page_id, title, None)
-                    else:
-                        yield (page_id, title, get_visible_links_from_article(text))
-                    remove_xml_element(element)
+        for event, element in etree.iterparse(
+            file, events=("end",), tag="{http://www.mediawiki.org/xml/export-0.10/}page"
+        ):
+            if int(NS(element)[0]) != 0:  # 0 is the main namespace
+                continue
+            page_id = int(PAGE_ID(element)[0])
+            title = str(TITLE(element)[0])
+            if skip_links:
+                yield (page_id, title)
+            elif bool(REDIRECT(element)):
+                yield (page_id, title, {str(REDIRECT(element)[0]): None})
+            else:
+                yield (page_id, title, get_links_from_article(str(TEXT(element)[0])))
+            remove_xml_element(element)

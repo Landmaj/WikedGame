@@ -40,10 +40,7 @@ def main(filepath):
                         page_id = title_to_id[key]
                     except KeyError:
                         continue
-                    if key == value:
-                        links[page_id] = None
-                    else:
-                        links[page_id] = value
+                    links[page_id] = value
                 graph[item[0]] = Node(item[0], item[1], links)
                 counter += 1
     minutes, seconds = divmod(round(time() - start_timestamp), 60)
