@@ -1,10 +1,9 @@
 import bz2
+from multiprocessing import Queue
 from pathlib import Path
-from typing import Dict, Generator, Optional, Tuple
+from typing import Generator, Tuple
 
 from lxml import etree
-
-from wiked.dump.link_parser import get_links_from_article
 
 
 def remove_xml_element(element):
@@ -15,42 +14,47 @@ def remove_xml_element(element):
             del ancestor.getparent()[0]
 
 
-NAMESPACES = {"wiki": "http://www.mediawiki.org/xml/export-0.10/"}
-NS = etree.XPath(
-    ".//wiki:ns/text()", namespaces=NAMESPACES, smart_strings=False, regexp=False
-)
-PAGE_ID = etree.XPath(
-    ".//wiki:id/text()", namespaces=NAMESPACES, smart_strings=False, regexp=False
-)
-TITLE = etree.XPath(
-    ".//wiki:title/text()", namespaces=NAMESPACES, smart_strings=False, regexp=False
-)
-REDIRECT = etree.XPath(
-    ".//wiki:redirect/@title", namespaces=NAMESPACES, smart_strings=False, regexp=False
-)
-TEXT = etree.XPath(
-    ".//wiki:revision/wiki:text/text()",
-    namespaces=NAMESPACES,
-    smart_strings=False,
-    regexp=False,
-)
+kwargs = {
+    "namespaces": {"wiki": "http://www.mediawiki.org/xml/export-0.10/"},
+    "smart_strings": False,
+    "regexp": False,
+}
+xpath_ns = etree.XPath(".//wiki:ns/text()", **kwargs)
+xpath_page_id = etree.XPath(".//wiki:id/text()", **kwargs)
+xpath_title = etree.XPath(".//wiki:title/text()", **kwargs)
+xpath_redirect = etree.XPath(".//wiki:redirect/@title", **kwargs)
+xpath_text = etree.XPath(".//wiki:revision/wiki:text/text()", **kwargs)
 
 
-def parse_wiki_dump(
-    xml_bz2_path: Path, skip_links: bool = False
-) -> Generator[Tuple[int, str, Optional[Dict[str, str]]], None, None]:
-    with bz2.open(xml_bz2_path.as_posix(), "rb") as file:
+def parse_wiki_generator(xml_file: Path) -> Generator[Tuple[int, str], None, None]:
+    with bz2.open(xml_file.as_posix(), "rb") as file:
         for event, element in etree.iterparse(
             file, events=("end",), tag="{http://www.mediawiki.org/xml/export-0.10/}page"
         ):
-            if int(NS(element)[0]) != 0:  # 0 is the main namespace
+            if int(xpath_ns(element)[0]) != 0:  # 0 is the main namespace
                 continue
-            page_id = int(PAGE_ID(element)[0])
-            title = TITLE(element)[0]
-            if skip_links:
-                yield (page_id, title)
-            elif bool(REDIRECT(element)):
-                yield (page_id, title, {REDIRECT(element)[0]: None})
-            else:
-                yield (page_id, title, get_links_from_article(TEXT(element)[0]))
+            page_id = int(xpath_page_id(element)[0])
+            title = xpath_title(element)[0]
+            yield (page_id, title)
             remove_xml_element(element)
+
+
+def parse_wiki_process(xml_file: Path, tx: Queue) -> None:
+    with bz2.open(xml_file.as_posix(), "rb") as file:
+        """
+        If redirect -> (page_id: int, title: str, redirect_to: str, None)
+        Else -> (page_id: int, title: str, None, article_body: str)
+        """
+        for event, element in etree.iterparse(
+            file, events=("end",), tag="{http://www.mediawiki.org/xml/export-0.10/}page"
+        ):
+            if int(xpath_ns(element)[0]) != 0:  # 0 is the main namespace
+                continue
+            page_id = int(xpath_page_id(element)[0])
+            title = xpath_title(element)[0]
+            if bool(xpath_redirect(element)):
+                tx.put((page_id, title, xpath_redirect(element)[0], None))
+            else:
+                tx.put((page_id, title, None, xpath_text(element)[0]))
+            remove_xml_element(element)
+        tx.put(None)  # inform receiver that no more data will be sent
