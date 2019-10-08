@@ -15,25 +15,6 @@ def test_node_creation():
 
 
 @pytest.mark.parametrize(
-    ["page_id", "title", "links"],
-    [
-        (1, "Title", {2: "Title2", 3: "Title3"}),
-        (2, "2137", {2: "Title2", 3: None}),
-        (1, "Title", {}),
-    ],
-)
-def test_serialization_and_deserialization(page_id, title, links):
-    node = Node(page_id, title, links)
-    serialized_node = node.dumps()
-    assert isinstance(serialized_node, bytes)
-    deserialized_node = Node.loads(serialized_node)
-    assert isinstance(deserialized_node, Node)
-    assert deserialized_node.page_id == page_id
-    assert deserialized_node.title == title
-    assert node.edges == links
-
-
-@pytest.mark.parametrize(
     ["container", "expected_result"],
     [
         ([1, 2, 3], True),

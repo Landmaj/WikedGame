@@ -39,21 +39,6 @@ class Node:
         """
         return self.edges[item]
 
-    def dumps(self) -> bytes:
-        """
-        Serialize the node to be stored in a database.
-        """
-        data = (self.page_id, self.title, self.edges)
-        return msgpack.packb(data, use_bin_type=True)
-
-    @staticmethod
-    def loads(serialized_node: bytes) -> "Node":
-        """
-        Deserialize a node.
-        """
-        data = msgpack.unpackb(serialized_node, use_list=False, raw=False)
-        return Node(data[0], data[1], data[2])
-
 
 class Graph:
     def __init__(self, path: Path):
