@@ -1,11 +1,9 @@
-import dbm
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Optional, Tuple
-
-import msgpack
+from typing import Dict, Tuple
 
 from wiked.app.exc import NodeNotFound, PathNotFound
+from wiked.dump.db import DB
 
 
 @dataclass
@@ -39,47 +37,48 @@ class Node:
         """
         return self.edges[item]
 
+    def __iter__(self):
+        """
+        Iterate over page IDs this Node links to.
+        """
+        return iter(self.edges)
 
-class Graph:
+
+class Graph(DB):
     def __init__(self, path: Path):
-        self.db = dbm.open(path.as_posix(), "r")
+        super().__init__(path, "r")
 
-    def __enter__(self):
-        return self
+    def __getitem__(self, key: int) -> Node:
+        title, edges = super().__getitem__(key)
+        return Node(key, title, edges)
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.db.close()
+    def __setitem__(self, key, value):
+        raise TypeError(f"'{Graph.__name__}' object does not support item assignment")
 
-    def __getitem__(self, key: int) -> Optional[Node]:
-        key: bytes = msgpack.packb(key)
+    def find_shortest_path(self, start_id: int, end_id: int) -> Tuple[Node, ...]:
         try:
-            value = self.db[key]
+            start_node = self[start_id]
         except KeyError:
-            return None
-        return Node.loads(value)
+            raise NodeNotFound(f"Start node {start_id} does not exist.")
+        try:
+            end_node = self[end_id]
+        except KeyError:
+            raise NodeNotFound(f"End node {end_id} does not exist.")
 
+        if end_node in start_node:
+            return start_node, end_node
 
-class BFS:
-    def __init__(self, graph: Graph):
-        self.graph = graph
-        self.queue = []
-        self.visited = set()
-
-    def find_shortest_path(self, start: int, end: int) -> Tuple[int, ...]:
-        if self.graph[start] is None:
-            raise NodeNotFound(f"Start node {start} does not exist.")
-        if self.graph[end] is None:
-            raise NodeNotFound(f"End node {end} does not exist.")
-        item = self.graph[start]
-        if end in item.edges:
-            return start, end
-        for i in item.edges.keys() - self.visited:
-            self.queue.append((start, i))
-        while self.queue:
-            current = self.queue.pop(0)
-            item = self.graph[current[-1]]
-            if end in item.edges:
-                return (*current, end)
-            for i in item.edges.keys() - self.visited:
-                self.queue.append((*current, i))
-        raise PathNotFound(f"Could not found any path from node {start} to node {end}.")
+        queue = [(start_id, x) for x in start_node]
+        visited_or_queued = {start_id, *(x for x in start_node)}
+        while queue:
+            current_path = queue.pop(0)
+            current_node = self[current_path[-1]]
+            if end_node in current_node:
+                return (*(self[x] for x in current_path), end_node)
+            for x in current_node:
+                if x not in visited_or_queued:
+                    visited_or_queued.add(x)
+                    queue.append((*current_path, x))
+        raise PathNotFound(
+            f"Could not found any path from node {start_id} to node {end_id}."
+        )
