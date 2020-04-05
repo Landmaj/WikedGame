@@ -6,14 +6,10 @@ import (
 
 var (
 	ErrPathNotFound  = errors.New("path not found")
-	ErrNodeNotFound  = errors.New("node not found")
 	ErrBackendFailed = errors.New("backend failed")
 )
 
 type (
-	Storage interface {
-		GetNode(uint32) (Node, error)
-	}
 	Graph struct {
 		backend Storage
 	}

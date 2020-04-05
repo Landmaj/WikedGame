@@ -1,6 +1,10 @@
 package graph
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/golang/protobuf/proto"
+	"github.com/landmaj/WikedGame/pb"
+)
 
 type Node struct {
 	id          uint32
@@ -16,7 +20,7 @@ func NewNode(id uint32, title string, connections ...uint32) Node {
 	}
 }
 
-func (n Node) Equal(other Node) bool {
+func (n *Node) Equal(other Node) bool {
 	if n.id != other.id ||
 		n.title != other.title ||
 		!n.connections.equal(&other.connections) {
@@ -25,6 +29,30 @@ func (n Node) Equal(other Node) bool {
 	return true
 }
 
-func (n Node) String() string {
+func (n *Node) String() string {
 	return fmt.Sprint(n.title)
+}
+
+func (n *Node) ToBytes() []byte {
+	pbNode := pb.Node{
+		Id:          n.id,
+		Title:       n.title,
+		Connections: n.connections.toSlice(),
+	}
+	if msg, err := proto.Marshal(&pbNode); err != nil {
+		panic(err)
+	} else {
+		return msg
+	}
+}
+
+func (n *Node) FromBytes(b []byte) *Node {
+	pbNode := &pb.Node{}
+	if err := proto.Unmarshal(b, pbNode); err != nil {
+		panic(err)
+	}
+	n.id = pbNode.Id
+	n.title = pbNode.Title
+	n.connections = newSet(pbNode.Connections...)
+	return n
 }

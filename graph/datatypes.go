@@ -27,6 +27,13 @@ func (s *set) equal(other *set) bool {
 	return reflect.DeepEqual(*s, *other)
 }
 
+func (s *set) toSlice() (out []uint32) {
+	for v := range *s {
+		out = append(out, v)
+	}
+	return
+}
+
 // PATH
 
 type NodePath []Node

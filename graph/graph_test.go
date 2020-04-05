@@ -4,15 +4,6 @@ import (
 	"testing"
 )
 
-type inMemoryStorage map[uint32]Node
-
-func (s *inMemoryStorage) GetNode(i uint32) (Node, error) {
-	if n, ok := (*s)[i]; ok {
-		return n, nil
-	}
-	return Node{}, ErrNodeNotFound
-}
-
 func TestShortestPath(t *testing.T) {
 	n1 := NewNode(1, "one", 2, 3)
 	n2 := NewNode(2, "two", 1, 4)
@@ -21,7 +12,7 @@ func TestShortestPath(t *testing.T) {
 	n5 := NewNode(5, "five", 2)
 	n6 := NewNode(6, "six", 7)
 	n7 := NewNode(7, "seven")
-	storage := inMemoryStorage{1: n1, 2: n2, 3: n3, 4: n4, 5: n5, 6: n6, 7: n7}
+	storage := ramStorage{1: n1, 2: n2, 3: n3, 4: n4, 5: n5, 6: n6, 7: n7}
 	graph := Graph{backend: &storage}
 
 	cases := []struct {
