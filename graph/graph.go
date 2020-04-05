@@ -4,9 +4,11 @@ import (
 	"errors"
 )
 
-var ErrPathNotFound = errors.New("path not found")
-var ErrNodeNotFound = errors.New("node not found")
-var ErrBackendFailed = errors.New("backend failed")
+var (
+	ErrPathNotFound  = errors.New("path not found")
+	ErrNodeNotFound  = errors.New("node not found")
+	ErrBackendFailed = errors.New("backend failed")
+)
 
 type (
 	Storage interface {
