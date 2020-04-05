@@ -19,3 +19,6 @@
 # IDE
 .idea
 .vscode
+
+# Data
+*.xml.bz2
