@@ -2,69 +2,53 @@ package graph
 
 import (
 	"errors"
-	mapset "github.com/deckarep/golang-set"
 )
 
 var ErrPathNotFound = errors.New("path not found")
+var ErrNodeNotFound = errors.New("node not found")
+var ErrBackendFailed = errors.New("backend failed")
 
-type Storage interface {
-	GetNode(uint32) *Node
-}
-
-type Graph struct {
-	backend Storage
-}
-
-type Node struct {
-	id          uint32
-	title       string
-	connections mapset.Set
-}
-
-type queue []uint32
-
-func (q *queue) append(s mapset.Set) {
-	for _, i := range s.ToSlice() {
-		*q = append(*q, i.(uint32))
+type (
+	Storage interface {
+		GetNode(uint32) (Node, error)
 	}
-}
+	Graph struct {
+		backend Storage
+	}
+)
 
-func markCompleted(n *Node, q *queue, p *map[uint32]uint32) {
-	*q = (*q)[1:]
-	for _, i := range n.connections.ToSlice() {
-		i := i.(uint32)
-		if _, ok := (*p)[i]; ok {
+func (g *Graph) ShortestPath(a, b Node) (NodePath, error) {
+	queue := []uint32{a.id}
+	previouslySeen := make(map[uint32]uint32)
+
+	for len(queue) != 0 {
+		currentNode, err := g.backend.GetNode(queue[0])
+		if err == ErrNodeNotFound {
 			continue
+		} else if err != nil {
+			return NodePath{}, ErrBackendFailed
 		}
-		*q = append(*q, i)
-		(*p)[i] = n.id
-	}
-}
 
-func retracePath(a, b *Node, p *map[uint32]uint32, g *Graph) (path []*Node) {
-	path = append(path, a)
-	for i := (*p)[a.id]; i != b.id; i = (*p)[i] {
-		path = append(path, g.backend.GetNode(i))
-	}
-	path = append(path, b)
-	for left, right := 0, len(path)-1; left < right; left, right = left+1, right-1 {
-		path[left], path[right] = path[right], path[left]
-	}
-	return
-}
+		queue = queue[1:]
 
-func (g *Graph) ShortestPath(a, b *Node) ([]*Node, error) {
-	q := queue{a.id}
-	p := make(map[uint32]uint32)
-	for len(q) != 0 {
-		n := g.backend.GetNode(q[0])
-		if n == nil {
-			continue
+		for id := range currentNode.connections {
+			if _, ok := (previouslySeen)[id]; ok {
+				continue
+			}
+			queue = append(queue, id)
+			previouslySeen[id] = currentNode.id
 		}
-		markCompleted(n, &q, &p)
-		if n.connections.Contains(b.id) {
-			return retracePath(b, a, &p, g), nil
+
+		if currentNode.connections.contains(b.id) {
+			path := NodePath{b}
+			for id := previouslySeen[b.id]; id != a.id; id = previouslySeen[id] {
+				node, _ := g.backend.GetNode(id)
+				path = append(path, node)
+			}
+			path = append(path, a)
+			path.reverse()
+			return path, nil
 		}
 	}
-	return []*Node{}, ErrPathNotFound
+	return NodePath{}, ErrPathNotFound
 }
