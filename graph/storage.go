@@ -20,7 +20,7 @@ type Storage interface {
 type ramStorage map[uint32]Node
 
 func (s *ramStorage) SetNode(n Node) {
-	(*s)[n.id] = n
+	(*s)[n.Id] = n
 }
 
 func (s *ramStorage) GetNode(i uint32) (Node, error) {
@@ -39,7 +39,7 @@ type BoltStorage struct {
 
 func (db *BoltStorage) Init(filename string) {
 	var err error
-	db.DB, err = bolt.Open("my.db", 0600, &bolt.Options{Timeout: 1 * time.Second})
+	db.DB, err = bolt.Open(filename, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -55,8 +55,8 @@ func (db *BoltStorage) Init(filename string) {
 
 func (db *BoltStorage) SetNode(n Node) {
 	id := make([]byte, 4)
-	binary.LittleEndian.PutUint32(id, n.id)
-	if err := db.Update(func(tx *bolt.Tx) error {
+	binary.LittleEndian.PutUint32(id, n.Id)
+	if err := db.Batch(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(db.bucket))
 		err := b.Put(id, n.ToBytes())
 		return err

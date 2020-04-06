@@ -7,37 +7,37 @@ import (
 )
 
 type Node struct {
-	id          uint32
-	title       string
-	connections set
+	Id          uint32
+	Title       string
+	Connections set
 }
 
 func NewNode(id uint32, title string, connections ...uint32) Node {
 	return Node{
-		id:          id,
-		title:       title,
-		connections: newSet(connections...),
+		Id:          id,
+		Title:       title,
+		Connections: newSet(connections...),
 	}
 }
 
 func (n *Node) Equal(other Node) bool {
-	if n.id != other.id ||
-		n.title != other.title ||
-		!n.connections.equal(&other.connections) {
+	if n.Id != other.Id ||
+		n.Title != other.Title ||
+		!n.Connections.equal(&other.Connections) {
 		return false
 	}
 	return true
 }
 
 func (n *Node) String() string {
-	return fmt.Sprint(n.title)
+	return fmt.Sprint(n.Title)
 }
 
 func (n *Node) ToBytes() []byte {
 	pbNode := pb.Node{
-		Id:          n.id,
-		Title:       n.title,
-		Connections: n.connections.toSlice(),
+		Id:          n.Id,
+		Title:       n.Title,
+		Connections: n.Connections.toSlice(),
 	}
 	if msg, err := proto.Marshal(&pbNode); err != nil {
 		panic(err)
@@ -51,8 +51,8 @@ func (n *Node) FromBytes(b []byte) *Node {
 	if err := proto.Unmarshal(b, pbNode); err != nil {
 		panic(err)
 	}
-	n.id = pbNode.Id
-	n.title = pbNode.Title
-	n.connections = newSet(pbNode.Connections...)
+	n.Id = pbNode.Id
+	n.Title = pbNode.Title
+	n.Connections = newSet(pbNode.Connections...)
 	return n
 }
