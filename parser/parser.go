@@ -51,17 +51,11 @@ func newXMLParser(filename string, loopElements ...string) (*xmlparser.XMLParser
 }
 
 func generateTitleToID(st graph.Storage, parser *xmlparser.XMLParser) {
+	ch := trackProgress()
 	parser.SkipElements([]string{revisionTag, redirectTag})
-	started := time.Now()
-	var previous int64
 	wg := sync.WaitGroup{}
 	for xml := range parser.Stream() {
-		elapsed := int64(time.Since(started).Seconds())
-		if elapsed > previous {
-			mBytesPerSecond := int64(parser.TotalReadSize) / elapsed / (1024 * 1024)
-			fmt.Printf("\r%ds elapsed, %d mB/s", elapsed, mBytesPerSecond)
-			previous = elapsed
-		}
+		ch <- parser.TotalReadSize
 		if isMainNamespace(xml) {
 			wg.Add(1)
 			go func(xml *xmlparser.XMLElement, wg *sync.WaitGroup) {
@@ -70,21 +64,15 @@ func generateTitleToID(st graph.Storage, parser *xmlparser.XMLParser) {
 			}(xml, &wg)
 		}
 	}
-	fmt.Println()
+	close(ch)
 	wg.Wait()
 }
 
 func generateNodes(storage graph.Storage, parser *xmlparser.XMLParser) {
-	started := time.Now()
-	var previous int64
+	ch := trackProgress()
 	wg := sync.WaitGroup{}
 	for xml := range parser.Stream() {
-		elapsed := int64(time.Since(started).Seconds())
-		if elapsed > previous {
-			mBytesPerSecond := int64(parser.TotalReadSize) / elapsed / (1024 * 1024)
-			fmt.Printf("\r%ds elapsed, %d mB/s", elapsed, mBytesPerSecond)
-			previous = elapsed
-		}
+		ch <- parser.TotalReadSize
 		if isMainNamespace(xml) {
 			title := xmlToTitle(xml)
 			id := xmlToID(xml)
@@ -119,7 +107,7 @@ func generateNodes(storage graph.Storage, parser *xmlparser.XMLParser) {
 			}(node, storage, &wg)
 		}
 	}
-	fmt.Println()
+	close(ch)
 	wg.Wait()
 }
 
@@ -149,4 +137,22 @@ func xmlToID(xml *xmlparser.XMLElement) uint32 {
 
 func xmlToText(xml *xmlparser.XMLElement) string {
 	return xml.Childs[revisionTag][0].Childs[textTag][0].InnerText
+}
+
+func trackProgress() chan<- uint64 {
+	ch := make(chan uint64)
+	go func() {
+		started := time.Now()
+		var previous int64
+		for in := range ch {
+			elapsed := int64(time.Since(started).Seconds())
+			if elapsed > previous {
+				mBytesPerSecond := int64(in) / elapsed / (1024 * 1024)
+				fmt.Printf("\r%ds elapsed, %d mB/s", elapsed, mBytesPerSecond)
+				previous = elapsed
+			}
+		}
+		fmt.Println()
+	}()
+	return ch
 }
