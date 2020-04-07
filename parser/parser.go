@@ -6,6 +6,7 @@ import (
 	"github.com/dsnet/compress/bzip2"
 	"github.com/landmaj/WikedGame/graph"
 	xmlparser "github.com/tamerh/xml-stream-parser"
+	"log"
 	"os"
 	"strconv"
 	"sync"
@@ -40,11 +41,11 @@ func ParseXML(storage graph.Storage, filename string) {
 func newXMLParser(filename string, loopElements ...string) (*xmlparser.XMLParser, *os.File) {
 	f, err := os.Open(filename)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	r, err := bzip2.NewReader(f, nil)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	br := bufio.NewReaderSize(r, 65536)
 	return xmlparser.NewXMLParser(br, loopElements...), f
@@ -60,7 +61,10 @@ func generateTitleToID(st graph.Storage, parser *xmlparser.XMLParser) {
 			wg.Add(1)
 			go func(xml *xmlparser.XMLElement, wg *sync.WaitGroup) {
 				defer wg.Done()
-				st.SetTitleToID(xmlToTitle(xml), xmlToID(xml))
+				err := st.SetTitleToID(xmlToTitle(xml), xmlToID(xml))
+				if err != nil {
+					log.Fatal(err)
+				}
 			}(xml, &wg)
 		}
 	}
@@ -74,7 +78,7 @@ func generateNodes(storage graph.Storage, parser *xmlparser.XMLParser) {
 	for xml := range parser.Stream() {
 		ch <- parser.TotalReadSize
 		wg.Add(1)
-		go func() {
+		go func(xml *xmlparser.XMLElement, wg *sync.WaitGroup) {
 			defer wg.Done()
 			if isMainNamespace(xml) {
 				title := xmlToTitle(xml)
@@ -85,7 +89,7 @@ func generateNodes(storage graph.Storage, parser *xmlparser.XMLParser) {
 					if err == graph.ErrNodeNotFound {
 						connections = []uint32{}
 					} else if err != nil {
-						panic(err)
+						log.Fatal(err)
 					} else {
 						connections = []uint32{redirectID}
 					}
@@ -96,16 +100,19 @@ func generateNodes(storage graph.Storage, parser *xmlparser.XMLParser) {
 						if err == graph.ErrNodeNotFound {
 							continue
 						} else if err != nil {
-							panic(err)
+							log.Fatal(err)
 						} else {
 							connections = append(connections, linkID)
 						}
 					}
 				}
 				node := graph.NewNode(id, title, connections...)
-				storage.SetNode(node)
+				err := storage.SetNode(node)
+				if err != nil {
+					log.Fatal(err)
+				}
 			}
-		}()
+		}(xml, &wg)
 	}
 	close(ch)
 	wg.Wait()
@@ -130,7 +137,7 @@ func xmlToTitle(xml *xmlparser.XMLElement) string {
 func xmlToID(xml *xmlparser.XMLElement) uint32 {
 	id, err := strconv.Atoi(xml.Childs[idTag][0].InnerText)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	return uint32(id)
 }
