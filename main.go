@@ -21,7 +21,9 @@ func main() {
 		log.Fatal("'-db' flag required")
 	}
 	storage := graph.BoltStorage{}
-	storage.Init(dbFile)
+	if err := storage.Init(dbFile); err != nil {
+		log.Fatal(err)
+	}
 
 	if xmlFile != "" {
 		log.Println("Parsing XML:", xmlFile)

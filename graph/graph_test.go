@@ -13,7 +13,7 @@ func TestShortestPath(t *testing.T) {
 	n6 := NewNode(6, "six", 7)
 	n7 := NewNode(7, "seven")
 	storage := ramStorage{1: n1, 2: n2, 3: n3, 4: n4, 5: n5, 6: n6, 7: n7}
-	graph := Graph{backend: &storage}
+	graph := Graph{Storage: &storage}
 
 	cases := []struct {
 		start Node

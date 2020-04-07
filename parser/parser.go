@@ -23,18 +23,17 @@ const (
 )
 
 func ParseXML(storage graph.Storage, filename string) {
-	idMap := make(map[string]uint32)
 	{
 		fmt.Println("First pass...")
-		p, f := newXMLParser(filename, pageTag)
-		defer f.Close()
-		idMap = generateTitleToID(p)
+		parser, file := newXMLParser(filename, pageTag)
+		defer file.Close()
+		generateTitleToID(storage, parser)
 	}
 	{
 		fmt.Println("Second pass...")
-		p, f := newXMLParser(filename, pageTag)
-		defer f.Close()
-		generateNodes(p, storage, &idMap)
+		parser, file := newXMLParser(filename, pageTag)
+		defer file.Close()
+		generateNodes(storage, parser)
 	}
 }
 
@@ -51,11 +50,11 @@ func newXMLParser(filename string, loopElements ...string) (*xmlparser.XMLParser
 	return xmlparser.NewXMLParser(br, loopElements...), f
 }
 
-func generateTitleToID(parser *xmlparser.XMLParser) map[string]uint32 {
-	output := make(map[string]uint32)
+func generateTitleToID(st graph.Storage, parser *xmlparser.XMLParser) {
 	parser.SkipElements([]string{revisionTag, redirectTag})
 	started := time.Now()
 	var previous int64
+	wg := sync.WaitGroup{}
 	for xml := range parser.Stream() {
 		elapsed := int64(time.Since(started).Seconds())
 		if elapsed > previous {
@@ -64,47 +63,64 @@ func generateTitleToID(parser *xmlparser.XMLParser) map[string]uint32 {
 			previous = elapsed
 		}
 		if isMainNamespace(xml) {
-			output[getTitle(xml)] = getID(xml)
+			wg.Add(1)
+			go func(xml *xmlparser.XMLElement, wg *sync.WaitGroup) {
+				defer wg.Done()
+				st.SetTitleToID(xmlToTitle(xml), xmlToID(xml))
+			}(xml, &wg)
 		}
 	}
 	fmt.Println()
-	return output
+	wg.Wait()
 }
 
-func generateNodes(pr *xmlparser.XMLParser, st graph.Storage, idMap *map[string]uint32) {
-	wgSender := sync.WaitGroup{}
+func generateNodes(storage graph.Storage, parser *xmlparser.XMLParser) {
 	started := time.Now()
 	var previous int64
-	for xml := range pr.Stream() {
+	wg := sync.WaitGroup{}
+	for xml := range parser.Stream() {
 		elapsed := int64(time.Since(started).Seconds())
 		if elapsed > previous {
-			mBytesPerSecond := int64(pr.TotalReadSize) / elapsed / (1024 * 1024)
+			mBytesPerSecond := int64(parser.TotalReadSize) / elapsed / (1024 * 1024)
 			fmt.Printf("\r%ds elapsed, %d mB/s", elapsed, mBytesPerSecond)
 			previous = elapsed
 		}
 		if isMainNamespace(xml) {
-			title := getTitle(xml)
-			id := getID(xml)
-			if ok, redirect := isRedirect(xml); ok {
-				if redirectID, ok := (*idMap)[redirect]; ok {
-					node := graph.NewNode(id, title, redirectID)
-					saveNode(&node, st, &wgSender)
+			title := xmlToTitle(xml)
+			id := xmlToID(xml)
+			var connections []uint32
+			if redirectTo, ok := isRedirect(xml); ok {
+				redirectID, err := storage.GetID(redirectTo)
+				if err == graph.ErrNodeNotFound {
+					connections = []uint32{}
+				} else if err != nil {
+					panic(err)
+				} else {
+					connections = []uint32{redirectID}
 				}
 			} else {
-				links := extractLinks(getArticleText(xml))
-				var connections []uint32
+				links := extractLinks(xmlToText(xml))
 				for link := range links {
-					if linkId, ok := (*idMap)[link.Target]; ok {
-						connections = append(connections, linkId)
+					linkID, err := storage.GetID(link.Target)
+					if err == graph.ErrNodeNotFound {
+						continue
+					} else if err != nil {
+						panic(err)
+					} else {
+						connections = append(connections, linkID)
 					}
-					node := graph.NewNode(id, title, connections...)
-					saveNode(&node, st, &wgSender)
 				}
 			}
+			node := graph.NewNode(id, title, connections...)
+			wg.Add(1)
+			go func(n graph.Node, st graph.Storage, wg *sync.WaitGroup) {
+				defer wg.Done()
+				st.SetNode(n)
+			}(node, storage, &wg)
 		}
 	}
 	fmt.Println()
-	wgSender.Wait()
+	wg.Wait()
 }
 
 func isMainNamespace(xml *xmlparser.XMLElement) bool {
@@ -112,18 +128,18 @@ func isMainNamespace(xml *xmlparser.XMLElement) bool {
 	return ns == 0
 }
 
-func isRedirect(xml *xmlparser.XMLElement) (bool, string) {
+func isRedirect(xml *xmlparser.XMLElement) (string, bool) {
 	if redirect := xml.Childs[redirectTag]; len(redirect) > 0 {
-		return true, redirect[0].Attrs[titleTag]
+		return redirect[0].Attrs[titleTag], true
 	}
-	return false, ""
+	return "", false
 }
 
-func getTitle(xml *xmlparser.XMLElement) string {
+func xmlToTitle(xml *xmlparser.XMLElement) string {
 	return xml.Childs[titleTag][0].InnerText
 }
 
-func getID(xml *xmlparser.XMLElement) uint32 {
+func xmlToID(xml *xmlparser.XMLElement) uint32 {
 	id, err := strconv.Atoi(xml.Childs[idTag][0].InnerText)
 	if err != nil {
 		panic(err)
@@ -131,14 +147,6 @@ func getID(xml *xmlparser.XMLElement) uint32 {
 	return uint32(id)
 }
 
-func getArticleText(xml *xmlparser.XMLElement) string {
+func xmlToText(xml *xmlparser.XMLElement) string {
 	return xml.Childs[revisionTag][0].Childs[textTag][0].InnerText
-}
-
-func saveNode(n *graph.Node, st graph.Storage, wg *sync.WaitGroup) {
-	wg.Add(1)
-	go func(n *graph.Node, st graph.Storage, wg *sync.WaitGroup) {
-		defer wg.Done()
-		st.SetNode(*n)
-	}(n, st, wg)
 }
