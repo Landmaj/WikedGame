@@ -73,39 +73,39 @@ func generateNodes(storage graph.Storage, parser *xmlparser.XMLParser) {
 	wg := sync.WaitGroup{}
 	for xml := range parser.Stream() {
 		ch <- parser.TotalReadSize
-		if isMainNamespace(xml) {
-			title := xmlToTitle(xml)
-			id := xmlToID(xml)
-			var connections []uint32
-			if redirectTo, ok := isRedirect(xml); ok {
-				redirectID, err := storage.GetID(redirectTo)
-				if err == graph.ErrNodeNotFound {
-					connections = []uint32{}
-				} else if err != nil {
-					panic(err)
-				} else {
-					connections = []uint32{redirectID}
-				}
-			} else {
-				links := extractLinks(xmlToText(xml))
-				for link := range links {
-					linkID, err := storage.GetID(link.Target)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if isMainNamespace(xml) {
+				title := xmlToTitle(xml)
+				id := xmlToID(xml)
+				var connections []uint32
+				if redirectTo, ok := isRedirect(xml); ok {
+					redirectID, err := storage.GetID(redirectTo)
 					if err == graph.ErrNodeNotFound {
-						continue
+						connections = []uint32{}
 					} else if err != nil {
 						panic(err)
 					} else {
-						connections = append(connections, linkID)
+						connections = []uint32{redirectID}
+					}
+				} else {
+					links := extractLinks(xmlToText(xml))
+					for link := range links {
+						linkID, err := storage.GetID(link.Target)
+						if err == graph.ErrNodeNotFound {
+							continue
+						} else if err != nil {
+							panic(err)
+						} else {
+							connections = append(connections, linkID)
+						}
 					}
 				}
+				node := graph.NewNode(id, title, connections...)
+				storage.SetNode(node)
 			}
-			node := graph.NewNode(id, title, connections...)
-			wg.Add(1)
-			go func(n graph.Node, st graph.Storage, wg *sync.WaitGroup) {
-				defer wg.Done()
-				st.SetNode(n)
-			}(node, storage, &wg)
-		}
+		}()
 	}
 	close(ch)
 	wg.Wait()
